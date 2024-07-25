@@ -1,0 +1,50 @@
+/* Add here all your css styles (customizations) */
+.error {
+	color: #f00;
+	/*display: none;*/
+}
+input.error {
+	border-color: #f00;
+	color: #000;
+}
+.breadcrumbs {
+	border-left: 2px solid #e67e22;
+}
+.buttom-10 {
+	margin-bottom: 10px
+}
+.buttom-20 {
+	margin-bottom: 20px
+}
+.center-text {
+	text-align: center !important;
+}
+
+.th-center th {
+	vertical-align: middle !important;
+	text-align: center !important;
+}
+.input-xs {
+  height: 28px;
+  padding: 2px 5px;
+  font-size: 12px;
+  line-height: 1.5; /* If Placeholder of the input is moved up, rem/modify this. */
+  border-radius: 3px;
+}
+.primary {
+	color: #fff;
+	background-color: #337ab7;
+}
+
+.chosen-container-single .chosen-single {
+	height: 30px !important;
+}
+.chosen-container {
+	font-size: 14px !important;
+}
+.main-box h1, .main-box h2 {
+	color: #fff;
+}
+.buttom-15 {
+	margin-bottom: 15px
+}

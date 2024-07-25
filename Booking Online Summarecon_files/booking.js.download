@@ -1,0 +1,441 @@
+$(function(){
+
+	/* Booking Form List Transaction Page */
+	set_jumlah_pesan();
+	
+	data_table_booking();
+
+	number_format();
+    
+  $('#filter-table-booking').on('change', function(){
+    // refresh_data_booking(); 
+    //$('.btn-refesh-ajax').trigger('click');
+    data_table_booking();
+  });
+
+  $('#c_filter_status').on('change', function(){
+    // refresh_data_booking();  
+    data_table_booking();  
+  });
+
+  $('.btn-refesh-ajax').on('click', function(){
+    refresh_data_booking();  
+  });
+
+  var token = $('meta[name="csrf-token"]').attr('content');
+
+  $('#list-booking tbody').on('mouseover', 'tr', function(){
+  	$(this).addClass('cursor-pointer');
+  })
+
+  $('#list-booking tbody').on('click', 'tr', function(){
+  	$('#list-booking tbody tr').removeClass('selected');
+  	$(this).addClass('selected');
+  })
+
+  // $('#btn-create-new').click(function(){
+  // 	var site_id = $('#filter-table-booking').val();
+  // 	window.location.assign(base_url+"/booking/add/0?site="+site_id+"&flag=1");
+  // })
+
+  $('#btn-print').click(function(){
+  	var id=$('.selected').attr('id');
+  	if(id && id!=='undefined') {
+  		window.open(base_url+"/booking/"+id, "_blank");
+  	} else {
+  		alert('Pilih Data Dalam Grid !');
+  	}
+  })
+
+  $('#btn-update').click(function(){
+  	var id=$('.selected').attr('id');
+  	if(id && id!=='undefined') {
+  		window.location.assign(base_url+"/booking/add/"+id);
+  	} else {
+  		alert('Pilih Data Dalam Grid !');
+  	}
+  })
+
+  $('#list-booking tbody').on('dbclick', 'tr', function(){
+  	$('#list-booking tbody tr').removeClass('selected');
+  	$(this).addClass('selected');
+  	var id=$(this).attr('id');
+  	window.location.assign(base_url+"/booking/add/"+id);
+  })
+
+  /* Booking Form Create/Update Page */
+
+  $('#btn-search-cust').click(function(){
+  	$('#myModal-search-cust').modal('show');	
+  })
+
+	$('#customer-lama').on('click','tbody tr', function(){
+		var id = $(this).attr('id');
+		if(id == null) {
+			$('#myModal-search-cust').modal('toggle');
+			return;
+		}
+		$('#loading').show();
+		$.ajax({
+			url: base_url+"/booking/lookup-customer-pp/"+id,
+			data: {},
+			type: 'GET',
+			success: function(data) {
+				if(data.status == '1') {
+					$("#pp_id").val(data.customer.PP_ID);
+					$("#nasabah1").val(data.customer.CALON_NASABAH_ID);
+					$("#txtname").val(data.customer.NAMA_NASABAH);
+					$("#txtktp").val(data.customer.NO_KTP);
+					if(data.customer.TGL_LAHIR!='01/01/1970') {
+						$("#txttgllhr").val(data.customer.TGL_LAHIR);
+					} else {
+						$("#txttgllhr").val('');
+					}
+					$("#txtnokk").val(data.customer.NO_KK);
+					$("#txtnik").val(data.customer.NPWP);
+					$("#hubkel").val(data.customer.KD_KELUARGA);
+					$("#txtalamat").val(data.customer.ALAMAT_KTP);
+					$("#txtkota").val(data.customer.KD_KABUPATEN);
+					$('#txtkota').trigger("chosen:updated");
+					$("#txttelpon").val(data.customer.NO_HP);
+					$("#txtkdpos").val(data.customer.KODEPOS_KTP);
+					$("#txtemail").val(data.customer.EMAIL);
+					$("#txtemailsales").val(data.customer.EMAIL_SALES);
+					$("#txtnote").val(data.customer.CATATAN);
+					$("#bank").val(data.customer.NAMA_BANK);
+					$('#bank').trigger("chosen:updated");
+					$("#cabangbank").val(data.customer.CABANG);
+					$("#namarek").val(data.customer.ATAS_NAMA_REKENING);
+					$("#txtnorek").val(data.customer.NO_REKENING);
+					$('#pemrekening option:selected').text(data.customer.ATAS_NAMA_REKENING);
+					$('#jumlahpesan option').remove();
+					totalPesan=parseInt(data.customer.JML_PESAN);
+					var options='';
+					for (var i=1; i<=totalPesan; i++) {
+						options+='<option value="'+i+'">'+i+'</option>';
+					}
+					$('#jumlahpesan').append(options);
+					$('#jumlahpesan').trigger('change');
+					$('#myModal-search-cust').modal('toggle');
+				} else {
+					alert('DAta Customer Tidak Ditemukan !');
+				}
+				$('#loading').hide();
+			},
+			error: function(xhr,status,error) {
+				$('#warning-text').append("<strong>"+error+"</strong>");
+				$('#warning').css('display','block');
+
+				$('#loading').hide();
+			}
+		})
+	})
+
+	if($('.input-tgl').length) {
+		$('.input-tgl').inputmask("dd/mm/yyyy",{ "placeholder": "dd/mm/yyyy" });
+	}
+
+	$(":checkbox").change(function() {
+		if(this.checked) {
+			$(this).val(1);	
+		} else {
+			$(this).val(0);
+		}		
+	});
+
+	var cek_pemesan2 = $('#chkpemesan2').val() 
+	if(cek_pemesan2 == '1') {
+		$('#pemesan2').css('display','block');
+	} else {
+		$('#pemesan2').css('display','none');
+	}
+
+	$('#chkpemesan2').change(function() {
+		if(this.checked) {
+			$('#pemesan2').css('display','block');
+		} else {
+			$('#pemesan2').css('display','none');
+		}
+  })
+  
+  if( $('#mode').val() == 'new' ) {
+    $('#txtname').blur(function(){
+      $('#namarek').val( $(this).val().toUpperCase() )
+    })
+  }
+
+	$('#jumlahpesan').change(function(){
+		set_jumlah_pesan();
+	})
+
+	$('#daftar-pesan ').on('change','.form-control', function(e) {
+		var id=$(this).attr('id');
+		var val=$(this).val();
+		var flag='1';
+		//Cek Other Unit Nomor 
+		$('#daftar-pesan .form-control').each(function(index, element) {	
+			var idx = $(this).attr('id')
+			var valx = $(this).val()
+			if(id != idx) {
+				if((val == valx) && (val != '')) {
+					alert("No Unit Tidak Boleh Sama !")
+					$('#'+id).val('');
+					flag = '0'
+					return; 
+				}
+			}
+		});
+	});
+
+	$('#submit-form').click(function(){
+    if(confirm('Submit Data ?')) {
+      save_data();
+    }	
+	})
+
+  $('.btn-bayar-cbc').click(function(){
+  	var id=$('#filter-table-booking').val();
+  	window.location.assign(base_url+'/booking/payment/'+id)
+  })
+  
+  $(document).on('click','.btn-payment',function(){
+  	var id=$(this).attr('data-id');
+  	snap_pay(id,1);
+  })
+
+	if($('.no-npwp').length) {
+		$('.no-npwp').inputmask("99.999.999.9-999.999",{ "placeholder": "XX.XXX.XXX.X-XXX.XXX" });
+	}
+
+  function snap_pay(id,mode)
+  {
+    $('#loading').show();
+    var set_id = $('#set_id').val();
+  	var params={}
+  	params['cbc_id']=id;
+  	params['periode']='PK';
+		$.ajax({
+			url: base_url+'/booking/payment/snap-payment',
+			data: params,
+			type: 'post',
+      headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+      },
+			success: function(data) {
+				$('#loading').hide();
+				if(data.status == '1')  {
+					snap.pay(data.token, {
+					  onSuccess: function(result){
+              if(mode=='1')
+               data_table_booking();
+              else
+                window.location.assign(base_url+"/booking?id="+set_id);
+						},
+					  onPending: function(result){
+              if(mode=='1')
+               data_table_booking();
+              else
+                window.location.assign(base_url+"/booking?id="+set_id);
+					  },
+					  onError: function(result){
+              console.log(result);
+              alert(result)
+						},
+					  onClose: function(){
+              console.log('customer closed the popup without finishing the payment');
+              if(mode=='2') {
+                window.location.assign(base_url+"/booking?id="+set_id);
+              } 
+						}
+					})
+				} else {
+					set_error_msg(data.pesan);
+				}
+			},
+			error: function(xhr,status,error) {
+				$('#loading').hide();
+			}
+		})
+  }
+
+	function save_data()
+	{
+    if( $("input[name='chkagree']").val() == '0' ) {
+			alert('Silahkan Centang Tombol Persetujuan Pemesanan \n(Data- Data yang diberikan adalah benar dan masih berlaku dan dapat dipertanggungjawabkan di kemudian hari.)');
+			return false;
+    } 
+    
+		$('#loading').show();
+		$('.error').empty().hide();
+		var params = $('#form-nasabah').serializeArray();
+
+		var total_pesan=parseInt($('#jumlahpesan').val());
+		var total_nomor=(total_pesan * 3);
+		for(var i=1; i<=total_nomor; i++) {
+			params.push({name:'stokunit'+i, value: $('#stokunit'+i).val() });
+			params.push({name:'urutanunit'+i, value: $('#urutanunit'+i).attr('urut') });
+		}
+
+		var set_id = $('#set_id').val();
+		$.ajax({
+			url: base_url+'/booking',
+			data: params,
+			type: 'post',
+      headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+      },
+			success: function(data) {
+				if(data.status=='1') 
+				{
+					$('.alert-content').html('');
+          // alert('Data Berhasil Disimpan !');
+          if( $('#mode').val() == 'new' ) {
+          	snap_pay(data.id,2);
+          } else {
+            alert('Data Berhasil Diupdate !');
+            window.location.assign(base_url+"/booking?id="+set_id);
+          }
+				}
+				else 
+				{
+					$('#loading').hide();
+					//set_error_msg(data.pesan);
+					//set_error_msg(JSON.stringify(data.pesan))
+          //$('html, body').animate({scrollTop: $(".alert-content").offset().top}, 200);
+          Swal.fire({
+            icon: 'error',
+            html: '<h2>'+data.pesan+'<h2>'
+          });
+				}						
+			},
+			error: function(xhr,status,error) {
+				$('#loading').hide();
+				set_error_msg({'html':JSON.stringify(xhr.responseText)})
+			} 
+		})
+  }
+
+	function set_jumlah_pesan() 
+	{
+    var flagPrioritas = $('#jalur_pembelian').val()
+    var flagLelang = $('#ikut_lelang').val()
+    if(flagPrioritas=='1') return;
+    // if(flagLelang=='Y') return;
+		ArrStudio = [];
+		ArrBedroom = [];
+		var html = "";
+		var no = 1;
+		$('#daftar-pesan').html('');
+		var total = parseInt($('#jumlahpesan').val());
+		var perkalian = 3;
+		
+		for(var a=1; a<=total;a++) 
+		{
+			html += "<div class='col-sm-4' id=pilihunit"+a+">"
+			html += "<label class='col-sm-12 control-label text-center' style='padding-bottom: 15px;'>Alternatif Pilihan Unit "+a+" </label>"
+
+			for(var i=1; i<=perkalian; i++) 
+			{
+				html += "<div class='col-sm-12 buttom-10'>"
+				html += "<label class='col-sm-4 control-label'>Pilihan "+i+" :</label>"
+				html += "<div class='col-sm-8'>"				
+				html += "<select name=stokunit"+no+" id=stokunit"+no+" urut="+i+" row="+no+" class='form-control pilihan-unit input-sm'>"				
+				html += $('#unit-value').html();
+				html += "</select>"
+				html += "</div>"
+				html += "</div>"
+				no++;
+			}
+			html += "</div>"
+		}
+		$('#daftar-pesan').append(html);
+	}
+
+	function number_format() {
+		$( ":input" ).each(function(){
+			var num   = $(this).attr('number');
+			var chars = $(this).attr('char');
+			var next  = $(this).attr('next');
+			if(num == '1') {
+				$( "#"+$(this).attr('id') ).keypress(function( event ) {
+					var theEvent = event || window.event;
+					var key = theEvent.keyCode || theEvent.which; 
+					if ((key < 48 || key > 57) && !(key == 8 || key == 9 || key == 13 || key == 37 || key == 38 || key == 39 || key == 40 || key == 46)) {
+						console.log(key)
+						theEvent.returnValue = false;
+						if (theEvent.preventDefault) theEvent.preventDefault();
+					}
+					if(key == 13) {
+						if(next != '') {
+							$( "#"+$(this).attr('next') ).focus();
+						}
+					}
+				})
+			}
+			else if(chars == '1') {
+				$( "#"+$(this).attr('id') ).keypress(function( event ) {
+					var theEvent = event || window.event;
+					var key = theEvent.keyCode || theEvent.which;
+					if ((key < 97 || key > 122) && (key < 65 || key > 90) && !(key == 8 || key == 9 || key == 13 || key == 32 || key == 37 || key == 38 || key == 39 || key == 40 || key == 46 )) {
+						theEvent.returnValue = false;
+						if (theEvent.preventDefault) theEvent.preventDefault();
+					}
+					if(key == 13) {
+						if(next != '') {
+							$( "#"+$(this).attr('next') ).focus();
+						}
+					}
+				})
+				$( "#"+$(this).attr('id') ).keyup(function(){
+					$(this).css('text-transform','uppercase');
+				});
+				$("#"+$(this).attr('id')).blur(function(){
+					$(this).css('text-transform','uppercase');
+				})
+			}
+		});
+	}
+
+	function data_table_booking()
+	{
+		if( $('#list-booking').length ) {
+			var token = $('meta[name="csrf-token"]').attr('content');
+			var url = $('#list-booking').data('url');
+		  var id = $('#filter-table-booking').val();
+		  var status = $('#c_filter_status').val();
+		  oTable = $('#list-booking').dataTable({
+			    "processing": true,
+			    "serverSide": true,
+			    "bDestroy": true,
+			    "ajax": {
+		      "url": base_url+"/"+url+"/"+id,
+		      "data": {_token: token,_status: status},
+		      "type": "post"
+			  },
+				"columns": [
+	        {"data": "no","orderable": false},
+	        {"data": "no_form"},
+			    {"data": "pilih_unit"},
+	        {"data": "nama1"},
+	        {"data": "jml_pesan"},
+	        {"data": "total_cf"},
+	        {"data": "sales"},
+	        {"data": "agen"},
+	        {"data": "tgl_input"},
+	        {"data": "print","orderable": false},
+	        {"data": "transfer","orderable": false},
+	        {"data": "status"},
+	        {"data": "nomor_va"},
+	        {"data": "action"}
+				]			    
+			});  
+		}	      
+	}
+
+	function refresh_data_booking()
+	{
+		oTable.fnDraw();
+		data_table_booking();
+	}
+
+})

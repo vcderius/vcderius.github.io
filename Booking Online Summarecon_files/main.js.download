@@ -1,0 +1,221 @@
+$(function(){
+
+	overlay('loading');
+
+	data_table_ajax();
+    
+  $('#filter-table').on('change', function(){
+    refresh_data_ajax();  
+  });
+
+  var token = $('meta[name="csrf-token"]').attr('content');
+
+  $("#list-datatable").on("mouseover",".edittable",function(){  
+  	$(this).css('cursor','pointer');
+  	var id = $(this).attr('data-id');
+  	var url = $(this).attr('data-url');
+  	var area = $(this).attr('data-area');
+    $(this).editable({
+      success: function(response, newValue) {
+      	$.ajax({
+          type:"post",
+          url:base_url+"/"+url,
+          data:{kode: id, email: newValue, area_id: area, _token: token},
+          success:function(result){
+        	  if(result.success != '1') {
+            	alert(result.msg);
+          	}
+          },
+          error:function(error){
+            alert('save failed');
+          }
+      	});
+      }
+    });
+  })     	
+
+  $('.datatable-common').dataTable({
+  	paging: true,
+  	"bDestroy" : true
+  })
+
+  if( $('.datepicker').length > 0 ) {
+  	$('.datepicker').datepicker({
+  		format: 'yyyy-mm-dd',
+      autoclose: true
+  	});
+  }
+
+  if( $('.clockpicker').length > 0 ) {
+  	$('.clockpicker').clockpicker({
+      placement: 'top',
+      autoclose: true
+  	});
+  }
+
+  if( $('.redactor').length > 0 ) {
+  	$('.redactor').redactor({
+
+  	});
+  }
+
+  if($('.chosen-select').length > 0) {
+    var config = {
+      '.chosen-select'           : {width:"100%",search_contains:true},
+      '.chosen-select-deselect'  : {allow_single_deselect:true},
+      '.chosen-select-no-single' : {disable_search_threshold:10},
+      '.chosen-select-no-results': {no_results_text:'Data tidak ditemukan !'},
+      '.chosen-select-width'     : {width:"100%"}
+    }
+    for (var selector in config) {
+      $(selector).chosen(config[selector]);
+    }
+  }
+
+  if( $('.numberformat').length > 0 ) {
+    $('.numberformat').number(true, 0);
+  }
+
+  $('.preloader').remove();
+
+  $.validator.setDefaults({ ignore: ":hidden:not(.chosen-select)" });
+
+  $('.form-validation').validate({
+    submitHandler: function(form) {
+      $('#loading').show();
+      var url=$('.form-validation').attr('data-url');
+	    $.ajax({
+        url: form.action,
+        type: form.method,
+        data: $(form).serialize(),
+        success: function(data) {
+        	$('#loading').hide();
+        	if(data.status=='1') {
+        		window.location.assign(base_url+'/'+url);
+        	} else {
+        		show_alert(data.status,data.text);	
+        	}	            	             
+        },
+        error: function(error) {
+        	$('#loading').hide();
+        	//alert(error);
+        	console.log(error);
+        }            
+	    });
+    }
+  });
+  
+  $('.form-validation :input').each(function(){
+  	var required=$(this).attr('data-req');
+  	var minlInput=$(this).attr('data-min');
+  	var number=$(this).attr('data-number');
+  	var name=$(this).attr('name');
+  	if(required=='1') {
+    	var items={}; 
+	    items['required']=true;
+	    if(minlInput!== undefined) items['minlength']=minlInput;
+	    if(number!== undefined) items['number']=true;
+	
+    	$(this).rules('add', items);
+  	}
+  })
+
+  $('.form-validation-file').validate();
+
+  $('.form-disabled').submit(function(e){
+    e.preventDefault();
+  });
+
+  $('#loading').hide();
+
+})
+
+function show_alert(status,pesan)
+{
+	$('.alert').remove();
+	var textWarning='';
+    if(status=='1') {
+     	textWarning+='<div class="alert alert-success alert-dismissable">';
+     	textWarning+='<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>';
+     	textWarning+='<strong>Save Data Success !</strong> '+pesan+''; 
+     	textWarning+='</div>';
+    } else {
+     	textWarning+='<div class="alert alert-danger alert-dismissable">';
+     	textWarning+='<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>';
+     	textWarning+='<strong>Save Data Failed !</strong> '+pesan+''; 
+     	textWarning+='</div>';	     
+    }
+    $('.alert-content').html(textWarning);
+}
+
+function data_table_ajax()
+{
+	if( $('#list-datatable').length ) {
+		var token = $('meta[name="csrf-token"]').attr('content');
+		var url = $('#list-datatable').data('url');
+	  	var id = $('#filter-table').val();
+	  	oTable = $('#list-datatable').dataTable({
+		    "processing": true,
+		    "serverSide": true,
+		    "bDestroy": true,
+		    "responsive": true,
+		    select: true,
+		    "ajax": {
+		      "url": base_url+"/"+url+"/"+id,
+		      "data": {_token: token},
+		      "type": "post"
+		    }
+		});  
+	}	      
+}
+
+function refresh_data_ajax()
+{
+	oTable.fnDraw();
+	data_table_ajax();
+}
+
+function sweatalert(type,title,content)
+{
+	swal({
+	    type: type,
+	    title: title,
+	    html: content
+	})
+}
+
+function set_error_msg(pesan)
+{
+	$('.alert-content').html('');
+	textWarning='';
+ 	textWarning+='<div class="alert alert-danger alert-dismissable">';
+ 	textWarning+='<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>';
+ 	textWarning+='<strong>Validasi Gagal !</strong> '+pesan+''; 
+ 	textWarning+='</div>';	
+ 	$('.alert-content').html(textWarning);
+ 	$('html, body').animate({ scrollTop: $('.alert-content').offset().top }, 'slow');
+}
+
+function set_success_msg(pesan)
+{
+  $('.alert-content').html('');
+  textWarning='';
+  textWarning+='<div class="alert alert-success alert-dismissable">';
+  textWarning+='<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>';
+  textWarning+='<strong>'+pesan+'</strong>'; 
+  textWarning+='</div>';  
+  $('.alert-content').html(textWarning);
+}
+
+function overlay(elm)
+{
+  var maskHeight = $(document).height();
+  var maskWidth = $(document).width();
+  $('#'+elm)
+  .css({'width':maskWidth,'height':maskHeight,'position':'fixed','z-index':'9000','background-color':'#FFF','top':'0px','left':'0px'})
+  .empty()
+  .append('<center><img src="'+base_url+'/assets/img/ajax-loader.gif" id="imgloader"></center>');
+  $('#imgloader').css({'top':(($(window).height())/2),'left':((maskWidth/2)-($('#imgloader').width() / 2)),'position':'absolute'});    
+  $('#'+elm).fadeIn(1000);   
+  $('#'+elm).fadeTo('slow',0.6); 
+}
